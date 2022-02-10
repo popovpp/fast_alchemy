@@ -3,18 +3,12 @@ ENV PYTHONUNBUFFERED 1
 RUN mkdir /code
 WORKDIR /code
 COPY requirements.txt /code/
-RUN pip install -r requirements.txt
-COPY . /code/
-
-
-FROM python:3.8.5
-
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-COPY . /code/
-WORKDIR /code
-
 RUN pip3 install -r requirements.txt
+COPY . /code/
+
+ENV PYTHONDONTWRITEBYTECODE=1
+WORKDIR /code/app
+
 RUN poetry update
 
 #ARG DJANGO_SETTINGS_MODULE="test1.settings_compose"
