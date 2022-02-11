@@ -5,10 +5,6 @@ services:
     restart: always
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
     volumes:
       - fastalchdata:/var/lib/postgresql/data/
   web:
@@ -20,12 +16,6 @@ services:
       - .:/code/
     ports:
       - "8000:8000"
-    environment:
-      API_PG_USER: postgres
-      API_PG_PASSWORD: postgres
-      API_PG_DB: postgres
-      API_PG_HOST: db
-      API_PG_PORT: 5432
     depends_on:
       - db
 volumes:

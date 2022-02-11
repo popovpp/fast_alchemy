@@ -35,4 +35,19 @@ class Post(PostInDBBase):
 # Additional properties stored in DB
 class PostInDB(PostInDBBase):
     pass
-    
+
+
+class HTTPErrorBase(BaseModel):
+    detail: Optional[str] = None
+
+
+class HTTPError(HTTPErrorBase):
+    pass
+
+
+class HTTPNoContentBase(BaseModel):
+    detail: Optional[str] = None
+
+
+class HTTPNoContent(HTTPNoContentBase):
+    pass

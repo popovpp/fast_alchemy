@@ -3,7 +3,7 @@ from typing import Any, List
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import UUID4
 from sqlalchemy.orm import Session
-from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 
 from . import actions, models, schemas
 from .db import SessionLocal, engine
@@ -74,7 +74,7 @@ def get_post(*, db: Session = Depends(get_db), id: UUID4) -> Any:
 
 @app.delete(
     "/posts/{id}",
-    response_model=schemas.Post,
+    response_model=schemas.HTTPNoContent,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["posts"],
 )
@@ -83,5 +83,5 @@ def delete_post(*, db: Session = Depends(get_db), id: UUID4) -> Any:
     if not post:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Post not found")
     post = actions.post.remove(db=db, id=id)
-    return post
+    return {'detail': 'No content'}
     
