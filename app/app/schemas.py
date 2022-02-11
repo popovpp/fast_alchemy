@@ -51,3 +51,4 @@ class HTTPNoContentBase(BaseModel):
 
 class HTTPNoContent(HTTPNoContentBase):
     pass
+    

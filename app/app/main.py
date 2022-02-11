@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import UUID4
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
+from fastapi.security import OAuth2PasswordBearer
 
 from . import actions, models, schemas
 from .db import SessionLocal, engine
@@ -13,6 +14,8 @@ from .db import SessionLocal, engine
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # Dependency to get DB session.
@@ -84,4 +87,9 @@ def delete_post(*, db: Session = Depends(get_db), id: UUID4) -> Any:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Post not found")
     post = actions.post.remove(db=db, id=id)
     return {'detail': 'No content'}
+
+
+@app.get("/items/")
+def read_items(token: str = Depends(oauth2_scheme)):
+    return {"token": token}
     
