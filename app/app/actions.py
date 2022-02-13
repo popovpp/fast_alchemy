@@ -69,7 +69,6 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
 class PostActions(BaseActions[Post, schemas.PostCreate, schemas.PostUpdate]):
     """Post actions with basic CRUD operations"""
-
     pass
 
 

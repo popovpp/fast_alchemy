@@ -7,30 +7,30 @@ services:
       - "5432:5432"
     env_file:
      - app/.env
-#    environment:
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: postgres
-#      POSTGRES_DB: postgres
     volumes:
       - fastalchdata:/var/lib/postgresql/data/
   web:
     build:
-      context: .
+      context: ./app
     restart: always
     command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; poetry run uvicorn app.main:app --reload --host 0.0.0.0'
     volumes:
       - .:/code/
     ports:
       - "8000:8000"
-#    env_file:
-#     - app/.env
-#    environment:
-#      API_PG_USER: postgres
-#      API_PG_PASSWORD: postgres
-#      API_PG_DB: postgres
-#      API_PG_HOST: db
-#      API_PG_PORT: 5432
     depends_on:
       - db
+  web1:
+    build:
+      context: ./accounts
+    restart: always
+    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; poetry run uvicorn accounts.main:app --reload --host 0.0.0.0 --port 8001'
+    volumes:
+      - .:/code/
+    ports:
+      - "8001:8001"
+    depends_on:
+      - db
+      - web
 volumes:
   fastalchdata:

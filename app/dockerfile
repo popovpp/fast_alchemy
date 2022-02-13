@@ -1,13 +1,13 @@
 FROM python:3.8.5
 ENV PYTHONUNBUFFERED 1
 RUN mkdir /code
-WORKDIR /code
-COPY requirements.txt /code/
+RUN mkdir /code/app
+WORKDIR /code/app
+COPY requirements.txt /code/app
 RUN pip3 install -r requirements.txt
-COPY . /code/
+COPY . /code/app
 
 ENV PYTHONDONTWRITEBYTECODE=1
-WORKDIR /code/app
 
 RUN poetry update
 
