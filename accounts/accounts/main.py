@@ -1,34 +1,93 @@
-from fastapi import Depends, FastAPI
+from typing import Any, List
 
-from .db import create_db_and_tables
-from .models import UserDB
-from .users import auth_backend, current_active_user, fastapi_users
+from fastapi import Depends, FastAPI, HTTPException
+from pydantic import UUID4
+from sqlalchemy.orm import Session
+from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
+# from fastapi.security import OAuth2PasswordBearer
+
+from . import actions, models, schemas
+from .db import SessionLocal, engine
+
+# Create all tables in the database.
+# Comment this out if you using migrations.
+models.Base.metadata.create_all(engine)
 
 app = FastAPI()
 
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+# Dependency to get DB session.
+def get_db():
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        db.close()
+
+
+@app.get("/")
+def index():
+    return {"message": "Hello world!"}
+
+
+@app.get("/users", response_model=List[schemas.User], tags=["users"])
+def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
+    users = actions.user.get_all(db=db, skip=skip, limit=limit)
+    return users
+
+
+@app.post(
+    "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
-app.include_router(fastapi_users.get_register_router(), prefix="/auth", tags=["auth"])
-app.include_router(
-    fastapi_users.get_reset_password_router(),
-    prefix="/auth",
-    tags=["auth"],
+def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
+    user = actions.user.create(db=db, obj_in=user_in)
+    return user
+
+
+@app.put(
+    "/users/{id}",
+    response_model=schemas.UserCreate,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
+    tags=["users"],
 )
-app.include_router(
-    fastapi_users.get_verify_router(),
-    prefix="/auth",
-    tags=["auth"],
+def update_user(*, db: Session = Depends(get_db), id: UUID4, 
+                user_in: schemas.UserUpdate, ) -> Any:
+    user = actions.user.get(db=db, id=id)
+    if not user:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
+    user = actions.user.update(db=db, db_obj=user, obj_in=user_in)
+    return user
+
+
+@app.get(
+    "/users/{id}",
+    response_model=schemas.UserCreate,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
+    tags=["users"],
 )
-app.include_router(fastapi_users.get_users_router(), prefix="/users", tags=["users"])
+def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
+    user = actions.user.get(db=db, id=id)
+    if not user:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
+    return user
 
 
-@app.get("/authenticated-route")
-async def authenticated_route(user: UserDB = Depends(current_active_user)):
-    return {"message": f"Hello {user.email}!"}
+@app.delete(
+    "/users/{id}",
+    response_model=schemas.HTTPNoContent,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
+    tags=["users"],
+)
+def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
+    user = actions.user.get(db=db, id=id)
+    if not user:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
+    user = actions.user.remove(db=db, id=id)
+    return {'detail': 'No content'}
 
 
-@app.on_event("startup")
-async def on_startup():
-    # Not needed if you setup a migration system like Alembic
-    await create_db_and_tables()
+# @app.get("/items/")
+# def read_items(token: str = Depends(oauth2_scheme)):
+#     return {"token": token}
