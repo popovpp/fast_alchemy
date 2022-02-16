@@ -7,11 +7,13 @@ from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_C
 # from fastapi.security import OAuth2PasswordBearer
 
 from . import actions, models, schemas
-from .db import SessionLocal, engine
+from .db import SessionLocal, engine, init_models
 
 # Create all tables in the database.
 # Comment this out if you using migrations.
-models.Base.metadata.create_all(engine)
+#models.Base.metadata.create_all(engine)
+
+init_models(engine)
 
 app = FastAPI()
 
@@ -48,7 +50,7 @@ def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating)
 
 @app.put(
     "/users/{id}",
-    response_model=schemas.UserCreate,
+    response_model=schemas.UserCreated,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
@@ -63,7 +65,7 @@ def update_user(*, db: Session = Depends(get_db), id: UUID4,
 
 @app.get(
     "/users/{id}",
-    response_model=schemas.UserCreate,
+    response_model=schemas.UserCreated,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
