@@ -7,13 +7,11 @@ from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_C
 # from fastapi.security import OAuth2PasswordBearer
 
 from . import actions, models, schemas
-from .db import SessionLocal, engine, init_models
+from .db import SessionLocal, engine
 
 # Create all tables in the database.
 # Comment this out if you using migrations.
-#models.Base.metadata.create_all(engine)
-
-init_models(engine)
+# models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -35,16 +33,16 @@ def index():
 
 
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
-def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
-    users = actions.user.get_all(db=db, skip=skip, limit=limit)
+async def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
+    users = await actions.user.get_all(db=db, skip=skip, limit=limit)
     return users
 
 
 @app.post(
     "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
-def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
-    user = actions.user.create(db=db, obj_in=user_in)
+async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
+    user = await actions.user.create(db=db, obj_in=user_in)
     return user
 
 

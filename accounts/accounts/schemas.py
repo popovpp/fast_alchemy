@@ -18,12 +18,14 @@ class UserBase(BaseModel):
 
 # Properties to receive via API on creation
 class UserCreated(UserBase):
-    id: UUID4
+    pass
+    id: Optional[UUID4]
 
 
 class UserCreating(UserBase):
     password: str
-
+    created: Optional[datetime] = datetime.now()
+    last_login: Optional[datetime] = datetime.now()
 
 # Properties to receive via API on update
 class UserUpdate(BaseModel):

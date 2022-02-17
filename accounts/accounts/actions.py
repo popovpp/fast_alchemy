@@ -4,6 +4,9 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4, BaseModel
 from sqlalchemy.orm import Session
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from . import schemas
 from .db import Base
 from .models import User
@@ -24,19 +27,24 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    def get_all(self, db: Session, *, skip: int = 0,
-                limit: int = 100) -> List[ModelType]:
-        return db.query(self.model).offset(skip).limit(limit).all()
+    async def get_all(self, db: Session, *, skip: int = 0,
+                      limit: int = 100) -> List[ModelType]:
+        result = await db.execute(select(User).order_by(User.id).offset(skip).limit(limit))
+        return result.scalars().all()
 
-    def get(self, db: Session, id: UUID4) -> Optional[ModelType]:
-        return db.query(self.model).filter(self.model.id == id).first()
+    async def get(self, db: Session, id: UUID4) -> Optional[ModelType]:
+        result = await db.execute(select(User).filter(User.id==id))
+        return result.scalars().first()
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+        print(db, '######################################')
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)  # type: ignore
+        
+        print(db_obj, '###################################')
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
     def update(self, db: Session, *, db_obj: ModelType, 

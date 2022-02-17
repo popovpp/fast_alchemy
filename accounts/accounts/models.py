@@ -16,5 +16,5 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
-    created = Column(DateTime, nullable=False)
-    last_login = Column(DateTime, nullable=True)
+    created = Column(String, nullable=False)
+    last_login = Column(String, nullable=True)
