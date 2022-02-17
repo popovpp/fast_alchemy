@@ -24,7 +24,8 @@ def get_db():
         db = SessionLocal()
         yield db
     finally:
-        db.close()
+        pass
+#        db.close()
 
 
 @app.get("/")
@@ -39,7 +40,7 @@ async def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 
 
 
 @app.post(
-    "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
+    "/users", response_model=schemas.User, status_code=HTTP_201_CREATED, tags=["users"]
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user = await actions.user.create(db=db, obj_in=user_in)
@@ -48,27 +49,27 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
 
 @app.put(
     "/users/{id}",
-    response_model=schemas.UserCreated,
+    response_model=schemas.User,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
-def update_user(*, db: Session = Depends(get_db), id: UUID4, 
+async def update_user(*, db: Session = Depends(get_db), id: UUID4, 
                 user_in: schemas.UserUpdate, ) -> Any:
-    user = actions.user.get(db=db, id=id)
+    user = await actions.user.get(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    user = actions.user.update(db=db, db_obj=user, obj_in=user_in)
+    user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
     return user
 
 
 @app.get(
     "/users/{id}",
-    response_model=schemas.UserCreated,
+    response_model=schemas.User,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
-def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
-    user = actions.user.get(db=db, id=id)
+async def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
+    user = await actions.user.get(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
     return user

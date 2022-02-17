@@ -12,8 +12,8 @@ from .db import Base
 from .models import User
 
 # Define custom types for SQLAlchemy model, and Pydantic schemas
-ModelType = TypeVar("ModelType", bound=Base)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+ModelType = TypeVar("ModelType", bound=schemas.User)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
@@ -40,14 +40,14 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         print(db, '######################################')
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)  # type: ignore
-        
-        print(db_obj, '###################################')
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
+        await db.close()
+        print(db_obj, '###################################')
         return db_obj
 
-    def update(self, db: Session, *, db_obj: ModelType, 
+    async def update(self, db: Session, *, db_obj: ModelType, 
                obj_in: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
         obj_data = jsonable_encoder(db_obj)
         if isinstance(obj_in, dict):
@@ -58,8 +58,9 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if field in update_data:
                 setattr(db_obj, field, update_data[field])
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await db.close()
         return db_obj
 
     def remove(self, db: Session, *, id: UUID4) -> ModelType:
@@ -69,7 +70,7 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return obj
 
 
-class UserActions(BaseActions[User, schemas.UserCreated, schemas.UserUpdate]):
+class UserActions(BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
     """User actions with basic CRUD operations"""
 
     pass

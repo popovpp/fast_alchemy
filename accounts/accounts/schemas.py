@@ -18,7 +18,6 @@ class UserBase(BaseModel):
 
 # Properties to receive via API on creation
 class UserCreated(UserBase):
-    pass
     id: Optional[UUID4]
 
 
