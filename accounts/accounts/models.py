@@ -1,3 +1,5 @@
+import hashlib
+
 from uuid import uuid4
 from sqlalchemy import Column, String, Text, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
@@ -18,3 +20,6 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     created = Column(String, nullable=False)
     last_login = Column(String, nullable=True)
+
+    def set_password(self, password):
+        self.password = hashlib.md5(password.strip().encode()).hexdigest()

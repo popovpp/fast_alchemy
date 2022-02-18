@@ -37,14 +37,13 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return result.scalars().first()
 
     async def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        print(db, '######################################')
         obj_in_data = jsonable_encoder(obj_in)
         db_obj = self.model(**obj_in_data)  # type: ignore
+        db_obj.set_password(obj_in_data['password'])
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
         await db.close()
-        print(db_obj, '###################################')
         return db_obj
 
     async def update(self, db: Session, *, db_obj: ModelType, 

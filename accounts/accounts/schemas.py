@@ -17,9 +17,9 @@ class UserBase(BaseModel):
 
 
 # Properties to receive via API on creation
-class UserCreated(UserBase):
-    id: Optional[UUID4]
-
+class UserCreated(BaseModel):
+    id: UUID4
+    email: str
 
 class UserCreating(UserBase):
     password: str

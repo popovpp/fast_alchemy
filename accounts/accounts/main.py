@@ -40,11 +40,12 @@ async def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 
 
 
 @app.post(
-    "/users", response_model=schemas.User, status_code=HTTP_201_CREATED, tags=["users"]
+    "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user = await actions.user.create(db=db, obj_in=user_in)
-    return user
+    return {'id': user.id,
+            'email': user.email}
 
 
 @app.put(
