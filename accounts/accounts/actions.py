@@ -63,10 +63,10 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.close()
         return db_obj
 
-    def remove(self, db: Session, *, id: UUID4) -> ModelType:
-        obj = db.query(self.model).get(id)
-        db.delete(obj)
-        db.commit()
+    async def remove(self, db: Session, *, obj: User) -> ModelType:
+        await db.delete(obj)
+        await db.commit()
+        await db.close()
         return obj
 
 

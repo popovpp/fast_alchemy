@@ -81,11 +81,11 @@ async def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
-def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
-    user = actions.user.get(db=db, id=id)
+async def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
+    user = await actions.user.get(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    user = actions.user.remove(db=db, id=id)
+    user = await actions.user.remove(db=db, obj=user)
     return {'detail': 'No content'}
 
 
