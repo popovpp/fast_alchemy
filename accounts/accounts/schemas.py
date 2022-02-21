@@ -10,8 +10,8 @@ class UserBase(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     is_active: bool = True
-    is_verified: Optional[bool]
-    is_superuser: Optional[bool]
+    is_verified: Optional[bool] = False
+    is_superuser: Optional[bool] = False
     created: Optional[datetime]
     last_login: Optional[datetime]
 

@@ -23,3 +23,15 @@ class User(Base):
 
     def set_password(self, password):
         self.password = hashlib.md5(password.strip().encode()).hexdigest()
+
+    def set_is_active_false(self):
+        self.is_active = False
+
+    def set_is_superuser_false(self):
+        self.is_superuser = False
+
+    def set_is_active_true(self):
+        self.is_active = True
+
+    def set_is_superuser_true(self):
+        self.is_superuser = True

@@ -3,15 +3,15 @@ from typing import Any, List
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import UUID4
 from sqlalchemy.orm import Session
-from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
+from sqlalchemy import select
+from fastapi.encoders import jsonable_encoder
+from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST
 # from fastapi.security import OAuth2PasswordBearer
 
 from . import actions, models, schemas
 from .db import SessionLocal, engine
+from .models import User
 
-# Create all tables in the database.
-# Comment this out if you using migrations.
-# models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -34,7 +34,7 @@ def index():
 
 
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
-async def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
+async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
     users = await actions.user.get_all(db=db, skip=skip, limit=limit)
     return users
 
@@ -43,7 +43,16 @@ async def list_posts(db: Session = Depends(get_db), skip: int = 0, limit: int = 
     "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
-    user = await actions.user.create(db=db, obj_in=user_in)
+    user_in_data = jsonable_encoder(user_in)
+    user = await db.execute(select(User).filter(User.email==user_in_data['email']))
+    user = user.scalars().first()
+    if user:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
+    db_user = User(**user_in_data)  # type: ignore
+    db_user.set_password(user_in_data['password'])
+    db_user.set_is_active_false()
+    db_user.set_is_superuser_false()
+    user = await actions.user.create(db=db, db_obj=db_user)
     return {'id': user.id,
             'email': user.email}
 

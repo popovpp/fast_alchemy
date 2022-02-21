@@ -29,17 +29,14 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def get_all(self, db: Session, *, skip: int = 0,
                       limit: int = 100) -> List[ModelType]:
-        result = await db.execute(select(User).order_by(User.id).offset(skip).limit(limit))
+        result = await db.execute(select(User).order_by(User.created).offset(skip).limit(limit))
         return result.scalars().all()
 
     async def get(self, db: Session, id: UUID4) -> Optional[ModelType]:
         result = await db.execute(select(User).filter(User.id==id))
         return result.scalars().first()
 
-    async def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)  # type: ignore
-        db_obj.set_password(obj_in_data['password'])
+    async def create(self, db: Session, *, db_obj: CreateSchemaType) -> ModelType:
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
