@@ -64,4 +64,9 @@ class HTTPNoContentBase(BaseModel):
 
 class HTTPNoContent(HTTPNoContentBase):
     pass
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
     

@@ -1,21 +1,24 @@
 from typing import Any, List
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Security
 from pydantic import UUID4
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi.encoders import jsonable_encoder
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST
-# from fastapi.security import OAuth2PasswordBearer
 
 from . import actions, models, schemas
 from .db import SessionLocal, engine
 from .models import User
+from .auth import Auth
 
 
 app = FastAPI()
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+security = HTTPBearer()
+auth_handler = Auth()
 
 
 # Dependency to get DB session.
@@ -34,9 +37,13 @@ def index():
 
 
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
-async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100) -> Any:
-    users = await actions.user.get_all(db=db, skip=skip, limit=limit)
-    return users
+async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
+                     credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    token = credentials.credentials
+    if(auth_handler.decode_token(token)):
+        users = await actions.user.get_all(db=db, skip=skip, limit=limit)
+        return users
+    raise HTTPException(status_code=401, detail='Unauthorized')
 
 
 @app.post(
@@ -50,7 +57,7 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
     db_user = User(**user_in_data)  # type: ignore
     db_user.set_password(user_in_data['password'])
-    db_user.set_is_active_false()
+    db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
     user = await actions.user.create(db=db, db_obj=db_user)
     return {'id': user.id,
@@ -99,6 +106,44 @@ async def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
     return {'detail': 'No content'}
 
 
-# @app.get("/items/")
-# def read_items(token: str = Depends(oauth2_scheme)):
-#     return {"token": token}
+@app.post(
+    '/login',
+    tags=["auth"],
+)
+async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
+    user_in_data = jsonable_encoder(user_in)
+    user = await db.execute(select(User).filter(User.email==user_in_data['email']))
+    user = user.scalars().first()
+    if not user:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
+    if (not user.verify_password(user_in_data['password'])):
+        return HTTPException(status_code=401, detail='Invalid password')
+    access_token = auth_handler.encode_token(user.email)
+    refresh_token = auth_handler.encode_refresh_token(user.email)
+    return {'access_token': access_token, 'refresh_token': refresh_token}
+
+
+@app.get(
+    '/refresh_token',
+    tags=["auth"],
+)
+def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    refresh_token = credentials.credentials
+    new_token = auth_handler.refresh_token(refresh_token)
+    return {'access_token': new_token}
+
+
+@app.post(
+    '/secret',
+    tags=["auth"],
+)
+def secret_data():
+    return 'Secret data'
+
+
+@app.get(
+    '/notsecret',
+    tags=["auth"],
+)
+def not_secret_data():
+    return 'Not secret data'
