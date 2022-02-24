@@ -147,9 +147,7 @@ async def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
     tags=["auth"],
 )
 async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
-#    user_in['last_login'] = ''
     user_in_data = jsonable_encoder(user_in)
-############
     user = await db.execute(select(User).filter(User.email==user_in_data['email']))
     user = user.scalars().first()
     if not user:
@@ -157,11 +155,10 @@ async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
     if (not user.verify_password(user_in_data['password'])):
         raise HTTPException(status_code=401, detail='Invalid password')
     access_token = await auth_handler.encode_token(user.email)
-    user.set_last_login()
-    user_in.last_login = user.last_login
     refresh_token = await auth_handler.encode_refresh_token(user.email)
-    await actions.user.update(db=db, db_obj=user, obj_in=user_in)
-    return {'access_token': str(access_token), 'refresh_token': refresh_token}
+    user.set_last_login()
+    await actions.user.update(db=db, db_obj=user, obj_in={'last_login': user.last_login})
+    return {'access_token': access_token, 'refresh_token': refresh_token}
 
 
 @app.get(

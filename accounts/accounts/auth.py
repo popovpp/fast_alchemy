@@ -43,7 +43,7 @@ class Auth():
         payload = {
             'exp' : datetime.utcnow() + timedelta(days=0, hours=10),
             'iat' : datetime.utcnow(),
-        'scope': 'refresh_token',
+            'scope': 'refresh_token',
             'sub' : username
         }
         return jwt.encode(

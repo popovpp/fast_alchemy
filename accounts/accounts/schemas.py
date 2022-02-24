@@ -68,7 +68,6 @@ class HTTPNoContent(HTTPNoContentBase):
 class UserLogin(BaseModel):
     email: str
     password: str
-    last_login: Optional[str]
 
 
 class UserLogined(BaseModel):

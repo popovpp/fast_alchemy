@@ -56,4 +56,4 @@ class User(Base):
         self.created = str(datetime.now())
 
     def set_last_login(self):
-        self.created = str(datetime.now())
+        self.last_login = str(datetime.now())
