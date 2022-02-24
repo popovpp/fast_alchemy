@@ -1,3 +1,5 @@
+import passlib
+
 from typing import Any, List
 
 from fastapi import Depends, FastAPI, HTTPException, Security
@@ -6,7 +8,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST
+from starlette.status import (HTTP_201_CREATED, HTTP_404_NOT_FOUND,
+                              HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST,
+                              HTTP_401_UNAUTHORIZED,)
 
 from . import actions, models, schemas
 from .db import SessionLocal, engine
@@ -21,6 +25,22 @@ security = HTTPBearer()
 auth_handler = Auth()
 
 
+async def get_current_user(db: Session, token: str = Depends(security)):
+    email = await auth_handler.decode_token(token)
+    user = await actions.user.get_by_email(db=db, email=email)
+    if not user:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+        )
+    return user
+
+
 # Dependency to get DB session.
 def get_db():
     try:
@@ -33,17 +53,15 @@ def get_db():
 
 @app.get("/")
 def index():
-    return {"message": "Hello world!"}
+    return {"message": "You are wellcome!"}
 
 
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
 async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    token = credentials.credentials
-    if(auth_handler.decode_token(token)):
-        users = await actions.user.get_all(db=db, skip=skip, limit=limit)
-        return users
-    raise HTTPException(status_code=401, detail='Unauthorized')
+    current_user = await get_current_user(db=db, token=credentials.credentials)
+    users = await actions.user.get_all(db=db, skip=skip, limit=limit)
+    return users
 
 
 @app.post(
@@ -51,14 +69,14 @@ async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user_in_data = jsonable_encoder(user_in)
-    user = await db.execute(select(User).filter(User.email==user_in_data['email']))
-    user = user.scalars().first()
+    user = await actions.user.get_by_email(db=db, email=user_in_data['email'])
     if user:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
     db_user = User(**user_in_data)  # type: ignore
     db_user.set_password(user_in_data['password'])
     db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
+    db_user.set_created()
     user = await actions.user.create(db=db, db_obj=db_user)
     return {'id': user.id,
             'email': user.email}
@@ -71,12 +89,17 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     tags=["users"],
 )
 async def update_user(*, db: Session = Depends(get_db), id: UUID4, 
-                user_in: schemas.UserUpdate, ) -> Any:
-    user = await actions.user.get(db=db, id=id)
+                      user_in: schemas.UserUpdate,
+                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    current_user = await get_current_user(db=db, token=credentials.credentials)
+    user = await actions.user.get_by_id(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
-    return user
+    if (user.id == current_user.id or currenr_user.is_superuser):
+        user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
+        return user
+    else:
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unauthorized for this resource.")
 
 
 @app.get(
@@ -85,11 +108,17 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
-async def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
-    user = await actions.user.get(db=db, id=id)
+async def get_user(*, db: Session = Depends(get_db), id: UUID4,
+                   credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    current_user = await get_current_user(db=db, token=credentials.credentials)
+    user = await actions.user.get_by_id(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+    if (user.id == current_user.id or currenr_user.is_superuser):
+        return user
+    else:
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
+                            detail="Unauthorized for this resource.")
 
 
 @app.delete(
@@ -99,38 +128,53 @@ async def get_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
     tags=["users"],
 )
 async def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
-    user = await actions.user.get(db=db, id=id)
+    current_user = await get_current_user(db=db, token=credentials.credentials)
+    user = await actions.user.get_by_id(db=db, id=id)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    user = await actions.user.remove(db=db, obj=user)
-    return {'detail': 'No content'}
+    if (user.id == current_user.id or currenr_user.is_superuser):
+        user = await actions.user.remove(db=db, obj=user)
+        return {'detail': 'No content'}
+    else:
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
+                            detail="Unauthorized for this resource.")
 
 
 @app.post(
     '/login',
+    response_model=schemas.UserLogined,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["auth"],
 )
 async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
+#    user_in['last_login'] = ''
     user_in_data = jsonable_encoder(user_in)
+############
     user = await db.execute(select(User).filter(User.email==user_in_data['email']))
     user = user.scalars().first()
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
     if (not user.verify_password(user_in_data['password'])):
-        return HTTPException(status_code=401, detail='Invalid password')
-    access_token = auth_handler.encode_token(user.email)
-    refresh_token = auth_handler.encode_refresh_token(user.email)
-    return {'access_token': access_token, 'refresh_token': refresh_token}
+        raise HTTPException(status_code=401, detail='Invalid password')
+    access_token = await auth_handler.encode_token(user.email)
+    user.set_last_login()
+    user_in.last_login = user.last_login
+    refresh_token = await auth_handler.encode_refresh_token(user.email)
+    await actions.user.update(db=db, db_obj=user, obj_in=user_in)
+    return {'access_token': str(access_token), 'refresh_token': refresh_token}
 
 
 @app.get(
     '/refresh_token',
+    response_model=schemas.AccessTokenRefreshed,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["auth"],
 )
-def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     refresh_token = credentials.credentials
-    new_token = auth_handler.refresh_token(refresh_token)
-    return {'access_token': new_token}
+    print(refresh_token)
+    new_token = await auth_handler.refresh_token(refresh_token)
+    return {'new_access_token': new_token}
 
 
 @app.post(

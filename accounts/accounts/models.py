@@ -1,9 +1,11 @@
 import hashlib
 
+from datetime import datetime
 from uuid import uuid4
 from sqlalchemy import Column, String, Text, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from passlib.context import CryptContext
+from fastapi import HTTPException
 
 from .db import Base
 
@@ -27,7 +29,10 @@ class User(Base):
         self.password = self.hasher.hash(password)
 
     def verify_password(self, password):
-        return self.hasher.verify(password, self.password)
+        try:
+            return self.hasher.verify(password, self.password)
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=str(e))
 
     def set_is_active_false(self):
         self.is_active = False
@@ -46,3 +51,9 @@ class User(Base):
 
     def set_is_verified_true(self):
         self.is_verified = True
+
+    def set_created(self):
+        self.created = str(datetime.now())
+
+    def set_last_login(self):
+        self.created = str(datetime.now())

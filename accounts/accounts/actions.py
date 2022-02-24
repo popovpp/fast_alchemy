@@ -32,8 +32,12 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(select(User).order_by(User.created).offset(skip).limit(limit))
         return result.scalars().all()
 
-    async def get(self, db: Session, id: UUID4) -> Optional[ModelType]:
+    async def get_by_id(self, db: Session, id: UUID4) -> Optional[ModelType]:
         result = await db.execute(select(User).filter(User.id==id))
+        return result.scalars().first()
+
+    async def get_by_email(self, db: Session, email: str) -> Optional[ModelType]:
+        result = await db.execute(select(User).filter(User.email==email))
         return result.scalars().first()
 
     async def create(self, db: Session, *, db_obj: CreateSchemaType) -> ModelType:

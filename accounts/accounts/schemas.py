@@ -12,8 +12,8 @@ class UserBase(BaseModel):
     is_active: bool = True
     is_verified: Optional[bool] = False
     is_superuser: Optional[bool] = False
-    created: Optional[datetime]
-    last_login: Optional[datetime]
+    created: Optional[str]
+    last_login: Optional[str]
 
 
 # Properties to receive via API on creation
@@ -23,8 +23,7 @@ class UserCreated(BaseModel):
 
 class UserCreating(UserBase):
     password: str
-    created: Optional[datetime] = datetime.now()
-    last_login: Optional[datetime] = datetime.now()
+
 
 # Properties to receive via API on update
 class UserUpdate(BaseModel):
@@ -69,4 +68,13 @@ class HTTPNoContent(HTTPNoContentBase):
 class UserLogin(BaseModel):
     email: str
     password: str
-    
+    last_login: Optional[str]
+
+
+class UserLogined(BaseModel):
+    access_token: str
+    refresh_token: str
+
+
+class AccessTokenRefreshed(BaseModel):
+    new_access_token: str
