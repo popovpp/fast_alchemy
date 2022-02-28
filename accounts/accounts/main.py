@@ -175,6 +175,29 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
 
 
 @app.post(
+    "/superuser", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
+)
+async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
+    
+    superuser = await actions.user.get_superuser(db=db)
+    
+    if not superuser:
+        user_in_data = jsonable_encoder(user_in)
+        user = await actions.user.get_by_email(db=db, email=user_in_data['email'])
+        if user:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exists")
+        db_user = User(**user_in_data)  # type: ignore
+        db_user.set_password(user_in_data['password'])
+        db_user.set_is_verified_false()
+        db_user.set_is_superuser_true()
+        db_user.set_created()
+        user = await actions.user.create(db=db, db_obj=db_user)
+        return {'id': user.id, 'email': user.email}
+    else:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Superuser already exists")
+
+
+@app.post(
     '/secret',
     tags=["auth"],
 )

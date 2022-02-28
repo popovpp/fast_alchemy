@@ -69,6 +69,9 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.close()
         return obj
 
+    async def get_superuser(self, *, db: Session) -> List[ModelType]:
+        result = await db.execute(select(User).filter(User.is_superuser==True))
+        return result.scalars().first()
 
 class UserActions(BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
     """User actions with basic CRUD operations"""

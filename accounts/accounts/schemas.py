@@ -21,7 +21,10 @@ class UserCreated(BaseModel):
     id: UUID4
     email: str
 
-class UserCreating(UserBase):
+class UserCreating(BaseModel):
+    email: str
+    first_name: Optional[str]
+    last_name: Optional[str]
     password: str
 
 
