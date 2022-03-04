@@ -17,7 +17,7 @@ class Auth():
 
     async def encode_token(self, username):
         payload = {
-            'exp' : datetime.utcnow() + timedelta(days=0, minutes=30),
+            'exp' : datetime.utcnow() + timedelta(days=0, minutes=300),
             'iat' : datetime.utcnow(),
             'scope': 'access_token',
             'sub' : username

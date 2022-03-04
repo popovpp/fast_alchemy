@@ -16,6 +16,7 @@ from . import actions, models, schemas
 from .db import SessionLocal, engine
 from .models import User
 from .auth import Auth
+from . permissions import get_current_user, is_superuser
 
 
 app = FastAPI()
@@ -25,20 +26,20 @@ security = HTTPBearer()
 auth_handler = Auth()
 
 
-async def get_current_user(db: Session, token: str = Depends(security)):
-    email = await auth_handler.decode_token(token)
-    user = await actions.user.get_by_email(db=db, email=email)
-    if not user:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-        )
-    return user
+#async def get_current_user(db: Session, token: str = Depends(security)):
+#    email = await auth_handler.decode_token(token)
+#    user = await actions.user.get_by_email(db=db, email=email)
+#    if not user:
+#        raise HTTPException(
+#            status_code=HTTP_401_UNAUTHORIZED,
+#            detail="Invalid authentication credentials",
+#            headers={"WWW-Authenticate": "Bearer"},
+#        )
+#    if not user.is_active:
+#        raise HTTPException(
+#            status_code=HTTP_400_BAD_REQUEST, detail="Inactive user"
+#        )
+#    return user
 
 
 # Dependency to get DB session.
@@ -56,10 +57,11 @@ def index():
     return {"message": "You are wellcome!"}
 
 
+@is_superuser
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
 async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    current_user = await get_current_user(db=db, token=credentials.credentials)
+#    current_user = await get_current_user(db=db, token=credentials.credentials)
     users = await actions.user.get_all(db=db, skip=skip, limit=limit)
     return users
 
