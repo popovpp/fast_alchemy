@@ -16,7 +16,7 @@ from . import actions, models, schemas
 from .db import SessionLocal, engine
 from .models import User
 from .auth import Auth
-from . permissions import get_current_user, is_superuser
+from . permissions import get_current_user, auth_required
 
 
 app = FastAPI()
@@ -53,11 +53,11 @@ def get_db():
 
 
 @app.get("/")
+@auth_required
 def index():
     return {"message": "You are wellcome!"}
 
 
-@is_superuser
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
 async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:

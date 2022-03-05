@@ -3,6 +3,7 @@ from starlette.status import (HTTP_400_BAD_REQUEST,
 from fastapi.security import HTTPBearer
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
+from functools import wraps
 
 from .auth import Auth
 from . import actions
@@ -28,11 +29,24 @@ async def get_current_user(db: Session, token: str = Depends(security)):
     return user
 
 
-def is_superuser(func):
-    print('###############')
+def auth_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
-        db = kwargs.get['db']
-        token = kwargs.get['token']
-        print(db, token)
-        func(*args, **kwargs)
+        print('###############')
+        db = kwargs.get('db')
+#        token = kwargs.get('credentials').credentials
+        print(db)#, token)
+        return func(*args, **kwargs)
+    
+    return wrapper
+
+
+def is_superuser(func, *args, **kwargs):
+    print('###############')
+    return func(*args, **kwargs)
+    def wrapper(*args1, **kwargs1):
+#        db = kwargs1.get['db']
+#        token = kwargs.get['credentials'].credentials
+        print('qwerty')
+        func(*args1, **kwargs1)
     return wrapper
