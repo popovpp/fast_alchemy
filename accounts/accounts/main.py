@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException, Security
 from pydantic import UUID4
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.status import (HTTP_201_CREATED, HTTP_404_NOT_FOUND,
@@ -16,7 +17,7 @@ from . import actions, models, schemas
 from .db import SessionLocal, engine
 from .models import User
 from .auth import Auth
-from . permissions import get_current_user, auth_required
+from . permissions import get_current_user, auth_required, get_current_user
 
 
 app = FastAPI()
@@ -24,22 +25,6 @@ app = FastAPI()
 
 security = HTTPBearer()
 auth_handler = Auth()
-
-
-#async def get_current_user(db: Session, token: str = Depends(security)):
-#    email = await auth_handler.decode_token(token)
-#    user = await actions.user.get_by_email(db=db, email=email)
-#    if not user:
-#        raise HTTPException(
-#            status_code=HTTP_401_UNAUTHORIZED,
-#            detail="Invalid authentication credentials",
-#            headers={"WWW-Authenticate": "Bearer"},
-#        )
-#    if not user.is_active:
-#        raise HTTPException(
-#            status_code=HTTP_400_BAD_REQUEST, detail="Inactive user"
-#        )
-#    return user
 
 
 # Dependency to get DB session.
@@ -53,15 +38,14 @@ def get_db():
 
 
 @app.get("/")
-@auth_required
-def index():
+def index(request: Request):
     return {"message": "You are wellcome!"}
 
 
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
-async def list_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
+@auth_required('is_superuser')
+async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-#    current_user = await get_current_user(db=db, token=credentials.credentials)
     users = await actions.user.get_all(db=db, skip=skip, limit=limit)
     return users
 
@@ -90,37 +74,55 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
+@auth_required('is_superuser_or_is_owner')
 async def update_user(*, db: Session = Depends(get_db), id: UUID4, 
                       user_in: schemas.UserUpdate,
-                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    current_user = await get_current_user(db=db, token=credentials.credentials)
+                      credentials: HTTPAuthorizationCredentials = Security(security),
+                      request: Request) -> Any:
     user = await actions.user.get_by_id(db=db, id=id)
     if not user:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    if (user.id == current_user.id or currenr_user.is_superuser):
-        user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
-        return user
-    else:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Unauthorized for this resource.")
+        raise HTTPException(
+                        status_code=HTTP_404_NOT_FOUND,
+                        detail="User not found",
+                    )
+    user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
+    return user
 
 
 @app.get(
     "/users/{id}",
     response_model=schemas.User,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
-    tags=["users"],
+    tags=['users'],
 )
-async def get_user(*, db: Session = Depends(get_db), id: UUID4,
+@auth_required('is_superuser_or_is_owner')
+async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    current_user = await get_current_user(db=db, token=credentials.credentials)
     user = await actions.user.get_by_id(db=db, id=id)
     if not user:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    if (user.id == current_user.id or currenr_user.is_superuser):
-        return user
-    else:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
-                            detail="Unauthorized for this resource.")
+        raise HTTPException(
+                        status_code=HTTP_404_NOT_FOUND,
+                        detail="User not found",
+                    )
+    return user
+
+
+@app.get(
+    "/users/email/{email}",
+    response_model=schemas.User,
+    responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
+    tags=["users"],
+)
+@auth_required('is_superuser_or_is_owner')
+async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
+                   credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    user = await actions.user.get_by_email(db=db, email=email)
+    if not user:
+        raise HTTPException(
+                        status_code=HTTP_404_NOT_FOUND,
+                        detail="User not found",
+                    )
+    return user
 
 
 @app.delete(
@@ -129,17 +131,17 @@ async def get_user(*, db: Session = Depends(get_db), id: UUID4,
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["users"],
 )
-async def delete_user(*, db: Session = Depends(get_db), id: UUID4) -> Any:
-    current_user = await get_current_user(db=db, token=credentials.credentials)
+@auth_required('is_superuser')
+async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
+                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
     user = await actions.user.get_by_id(db=db, id=id)
     if not user:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    if (user.id == current_user.id or currenr_user.is_superuser):
-        user = await actions.user.remove(db=db, obj=user)
-        return {'detail': 'No content'}
-    else:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED,
-                            detail="Unauthorized for this resource.")
+        raise HTTPException(
+                        status_code=HTTP_404_NOT_FOUND,
+                        detail="User not found",
+                    )
+    user = await actions.user.remove(db=db, obj=user)
+    return {'detail': 'No content'}
 
 
 @app.post(
@@ -169,10 +171,11 @@ async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
     responses={HTTP_404_NOT_FOUND: {"model": schemas.HTTPError}},
     tags=["auth"],
 )
-async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+async def refresh_token(*, db: Session = Depends(get_db),
+                        credentials: HTTPAuthorizationCredentials = Security(security)):
     refresh_token = credentials.credentials
-    print(refresh_token)
     new_token = await auth_handler.refresh_token(refresh_token)
+    await get_current_user(db=db, token=new_token)
     return {'new_access_token': new_token}
 
 
@@ -197,19 +200,3 @@ async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.Us
         return {'id': user.id, 'email': user.email}
     else:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Superuser already exists")
-
-
-@app.post(
-    '/secret',
-    tags=["auth"],
-)
-def secret_data():
-    return 'Secret data'
-
-
-@app.get(
-    '/notsecret',
-    tags=["auth"],
-)
-def not_secret_data():
-    return 'Not secret data'
