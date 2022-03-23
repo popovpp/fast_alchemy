@@ -27,17 +27,14 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    async def get_all(self, db: Session, *, skip: int = 0,
+    async def get_all(self, obj, obj_ordered_attr: str, db: Session, *, skip: int = 0,
                       limit: int = 100) -> List[ModelType]:
-        result = await db.execute(select(User).order_by(User.created).offset(skip).limit(limit))
+        result = await db.execute(select(obj).order_by(getattr(obj, obj_ordered_attr, None)).offset(skip).limit(limit))
         return result.scalars().all()
 
-    async def get_by_id(self, db: Session, id: UUID4) -> Optional[ModelType]:
-        result = await db.execute(select(User).filter(User.id==id))
-        return result.scalars().first()
-
-    async def get_by_email(self, db: Session, email: str) -> Optional[ModelType]:
-        result = await db.execute(select(User).filter(User.email==email))
+    async def get_by_attr(self, obj, attr_value, attr_name: str, db: Session) -> Optional[ModelType]:
+        print(type(attr_value), attr_value)
+        result = await db.execute(select(obj).filter(getattr(obj, attr_name, None)==attr_value))
         return result.scalars().first()
 
     async def create(self, db: Session, *, db_obj: CreateSchemaType) -> ModelType:
@@ -63,15 +60,12 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.close()
         return db_obj
 
-    async def remove(self, db: Session, *, obj: User) -> ModelType:
+    async def remove(self, obj, *, db: Session) -> ModelType:
         await db.delete(obj)
         await db.commit()
         await db.close()
         return obj
 
-    async def get_superuser(self, *, db: Session) -> List[ModelType]:
-        result = await db.execute(select(User).filter(User.is_superuser==True))
-        return result.scalars().first()
 
 class UserActions(BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
     """User actions with basic CRUD operations"""

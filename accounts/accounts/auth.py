@@ -3,9 +3,11 @@ import jwt # used for encoding and decoding jwt tokens
 from fastapi import HTTPException # used to handle error handling
 from datetime import datetime, timedelta # used to handle expiry time for tokens
 
+from app.app.config import settings
+
 
 class Auth():
-    secret = '11111111'#os.getenv("APP_SECRET_STRING")
+    secret = os.getenv("AUTH_SECRET_STRING")
 
     async def encode_password(self, password):
         return await self.hasher.hash(password)

@@ -1,10 +1,9 @@
 from typing import Any, Dict, Optional
-# from dotenv import load_dotenv
-# from pathlib import Path
 from pydantic import BaseSettings, PostgresDsn, validator
+from dotenv import load_dotenv
 
 
-# load_dotenv(dotenv_path=Path("~/.env"))
+load_dotenv()
 
 
 class Settings(BaseSettings):

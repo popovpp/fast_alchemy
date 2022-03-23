@@ -46,7 +46,7 @@ def index(request: Request):
 @auth_required('is_superuser')
 async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    users = await actions.user.get_all(db=db, skip=skip, limit=limit)
+    users = await actions.user.get_all(User, 'created',db=db, skip=skip, limit=limit)
     return users
 
 
@@ -98,7 +98,7 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_id(db=db, id=id)
+    user = await actions.user.get_by_attr(User, id, 'id', db=db,)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -116,7 +116,7 @@ async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_email(db=db, email=email)
+    user = await actions.user.get_by_attr(User, email, 'email', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -134,13 +134,13 @@ async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
 @auth_required('is_superuser')
 async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
                       credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_id(db=db, id=id)
+    user = await actions.user.get_by_attr(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
                         detail="User not found",
                     )
-    user = await actions.user.remove(db=db, obj=user)
+    user = await actions.user.remove(user, db=db)
     return {'detail': 'No content'}
 
 
@@ -184,7 +184,7 @@ async def refresh_token(*, db: Session = Depends(get_db),
 )
 async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     
-    superuser = await actions.user.get_superuser(db=db)
+    superuser = await actions.user.get_by_attr(User, True, 'is_superuser', db=db)
     
     if not superuser:
         user_in_data = jsonable_encoder(user_in)

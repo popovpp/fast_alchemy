@@ -7,6 +7,7 @@ from functools import wraps
 
 from .auth import Auth
 from . import actions
+from .models import User
 
 
 security = HTTPBearer()
@@ -23,7 +24,7 @@ permissions = {
 
 async def get_current_user(db: Session, token: str = Depends(security)):
     email = await auth_handler.decode_token(token)
-    user = await actions.user.get_by_email(db=db, email=email)
+    user = await actions.user.get_by_attr(User, email, 'email', db=db)
     await db.close()
     if not user:
         raise HTTPException(
