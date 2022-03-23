@@ -5,15 +5,11 @@ from pydantic import UUID4, BaseModel
 from sqlalchemy.orm import Session
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import schemas
-from .db import Base
-from .models import User
 
-# Define custom types for SQLAlchemy model, and Pydantic schemas
-ModelType = TypeVar("ModelType", bound=schemas.User)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
+# Define abstract types for SQLAlchemy model, and Pydantic schemas
+ModelType = TypeVar("ModelType", bound=BaseModel)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
@@ -32,6 +28,7 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(select(obj).order_by(getattr(obj, obj_ordered_attr, None)).offset(skip).limit(limit))
         return result.scalars().all()
 
+    @classmethod
     async def get_by_attr(self, obj, attr_value, attr_name: str, db: Session) -> Optional[ModelType]:
         print(type(attr_value), attr_value)
         result = await db.execute(select(obj).filter(getattr(obj, attr_name, None)==attr_value))
@@ -65,12 +62,3 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.commit()
         await db.close()
         return obj
-
-
-class UserActions(BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
-    """User actions with basic CRUD operations"""
-
-    pass
-
-
-user = UserActions(User)

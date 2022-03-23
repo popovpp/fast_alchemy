@@ -3,7 +3,7 @@ import passlib
 from typing import Any, List
 
 from fastapi import Depends, FastAPI, HTTPException, Security
-from pydantic import UUID4
+from pydantic import UUID4, BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import Request
@@ -12,12 +12,30 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.status import (HTTP_201_CREATED, HTTP_404_NOT_FOUND,
                               HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST,
                               HTTP_401_UNAUTHORIZED,)
+from typing import TypeVar
 
-from . import actions, models, schemas
+from . import models, schemas
 from .db import SessionLocal, engine
 from .models import User
 from .auth import Auth
-from . permissions import get_current_user, auth_required, get_current_user
+from . permissions import get_current_user, auth_required
+
+from app.app import actions
+
+
+# Define custom types for SQLAlchemy model, and Pydantic schemas
+ModelType = TypeVar("ModelType", bound=schemas.User)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+
+
+class UserActions(actions.BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
+    """User actions with basic CRUD operations"""
+
+    pass
+
+
+user_actions = UserActions(User)
 
 
 app = FastAPI()
@@ -34,7 +52,6 @@ def get_db():
         yield db
     finally:
         pass
-#        db.close()
 
 
 @app.get("/")
@@ -46,7 +63,7 @@ def index(request: Request):
 @auth_required('is_superuser')
 async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    users = await actions.user.get_all(User, 'created',db=db, skip=skip, limit=limit)
+    users = await user_actions.get_all(User, 'created',db=db, skip=skip, limit=limit)
     return users
 
 
@@ -55,7 +72,7 @@ async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user_in_data = jsonable_encoder(user_in)
-    user = await actions.user.get_by_email(db=db, email=user_in_data['email'])
+    user = await user_actions.get_by_email(db=db, email=user_in_data['email'])
     if user:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
     db_user = User(**user_in_data)  # type: ignore
@@ -63,7 +80,7 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
     db_user.set_created()
-    user = await actions.user.create(db=db, db_obj=db_user)
+    user = await user_actions.create(db=db, db_obj=db_user)
     return {'id': user.id,
             'email': user.email}
 
@@ -79,13 +96,13 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
                       user_in: schemas.UserUpdate,
                       credentials: HTTPAuthorizationCredentials = Security(security),
                       request: Request) -> Any:
-    user = await actions.user.get_by_id(db=db, id=id)
+    user = await user_actions.get_by_attr(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
                         detail="User not found",
                     )
-    user = await actions.user.update(db=db, db_obj=user, obj_in=user_in)
+    user = await user_actions.update(db=db, db_obj=user, obj_in=user_in)
     return user
 
 
@@ -98,7 +115,7 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_attr(User, id, 'id', db=db,)
+    user = await user_actions.get_by_attr(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -116,7 +133,7 @@ async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_attr(User, email, 'email', db=db)
+    user = await user_actions.get_by_attr(User, email, 'email', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -134,13 +151,13 @@ async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
 @auth_required('is_superuser')
 async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
                       credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await actions.user.get_by_attr(User, id, 'id', db=db)
+    user = await user_actions.get_by_attr(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
                         detail="User not found",
                     )
-    user = await actions.user.remove(user, db=db)
+    user = await user_actions.remove(user, db=db)
     return {'detail': 'No content'}
 
 
@@ -161,7 +178,7 @@ async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
     access_token = await auth_handler.encode_token(user.email)
     refresh_token = await auth_handler.encode_refresh_token(user.email)
     user.set_last_login()
-    await actions.user.update(db=db, db_obj=user, obj_in={'last_login': user.last_login})
+    await user_actions.update(db=db, db_obj=user, obj_in={'last_login': user.last_login})
     return {'access_token': access_token, 'refresh_token': refresh_token}
 
 
@@ -184,11 +201,11 @@ async def refresh_token(*, db: Session = Depends(get_db),
 )
 async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     
-    superuser = await actions.user.get_by_attr(User, True, 'is_superuser', db=db)
+    superuser = await user.get_by_attr(User, True, 'is_superuser', db=db)
     
     if not superuser:
         user_in_data = jsonable_encoder(user_in)
-        user = await actions.user.get_by_email(db=db, email=user_in_data['email'])
+        user = await user.get_by_attr(User, user_in_data['email'], 'email', db=db)
         if user:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exists")
         db_user = User(**user_in_data)  # type: ignore
@@ -196,7 +213,7 @@ async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.Us
         db_user.set_is_verified_false()
         db_user.set_is_superuser_true()
         db_user.set_created()
-        user = await actions.user.create(db=db, db_obj=db_user)
+        user = await user_actions.create(db=db, db_obj=db_user)
         return {'id': user.id, 'email': user.email}
     else:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Superuser already exists")
