@@ -2,9 +2,9 @@ import pytest
 from faker import Faker
 
 from app import __version__
-from accounts.db import get_db
-from accounts.models import User
-from accounts.main import user_actions
+from accounts.accounts.db import get_db
+from accounts.accounts.models import User
+from accounts.accounts.main import user_actions
 
 
 fake = Faker()
