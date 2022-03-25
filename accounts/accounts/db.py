@@ -22,10 +22,12 @@ async def init_models(engine):
 
 def db_init_models():
     asyncio.run(init_models())
-    print("Done")
 
 
 # Dependency
-async def get_session() -> AsyncSession:
-    async with async_session() as session:
-        yield session
+def get_db():
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        pass

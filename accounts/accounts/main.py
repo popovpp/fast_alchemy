@@ -15,7 +15,7 @@ from starlette.status import (HTTP_201_CREATED, HTTP_404_NOT_FOUND,
 from typing import TypeVar
 
 from . import models, schemas
-from .db import SessionLocal, engine
+from .db import SessionLocal, engine, get_db
 from .models import User
 from .auth import Auth
 from . permissions import get_current_user, auth_required
@@ -35,7 +35,7 @@ class UserActions(actions.BaseActions[schemas.User, schemas.UserCreated, schemas
     pass
 
 
-user_actions = UserActions(User)
+user_actions = UserActions()
 
 
 app = FastAPI()
@@ -43,15 +43,6 @@ app = FastAPI()
 
 security = HTTPBearer()
 auth_handler = Auth()
-
-
-# Dependency to get DB session.
-def get_db():
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        pass
 
 
 @app.get("/")
@@ -201,11 +192,11 @@ async def refresh_token(*, db: Session = Depends(get_db),
 )
 async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     
-    superuser = await user.get_by_attr(User, True, 'is_superuser', db=db)
+    superuser = await user_actions.get_by_attr(User, True, 'is_superuser', db=db)
     
     if not superuser:
         user_in_data = jsonable_encoder(user_in)
-        user = await user.get_by_attr(User, user_in_data['email'], 'email', db=db)
+        user = await user_actions.get_by_attr(User, user_in_data['email'], 'email', db=db)
         if user:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exists")
         db_user = User(**user_in_data)  # type: ignore

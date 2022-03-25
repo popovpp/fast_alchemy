@@ -14,14 +14,6 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
 class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    def __init__(self, model: Type[ModelType]):
-        """Base class that can be extend by other action classes.
-           Provides basic CRUD and listing operations.
-
-        :param model: The SQLAlchemy model
-        :type model: Type[ModelType]
-        """
-        self.model = model
 
     async def get_all(self, obj, obj_ordered_attr: str, db: Session, *, skip: int = 0,
                       limit: int = 100) -> List[ModelType]:
@@ -30,7 +22,6 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     @classmethod
     async def get_by_attr(self, obj, attr_value, attr_name: str, db: Session) -> Optional[ModelType]:
-        print(type(attr_value), attr_value)
         result = await db.execute(select(obj).filter(getattr(obj, attr_name, None)==attr_value))
         return result.scalars().first()
 
