@@ -63,7 +63,7 @@ async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user_in_data = jsonable_encoder(user_in)
-    user = await user_actions.get_by_email(db=db, email=user_in_data['email'])
+    user = await user_actions.get_by_attr(User, user_in_data['email'], 'email', db=db)
     if user:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
     db_user = User(**user_in_data)  # type: ignore
@@ -71,6 +71,7 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
     db_user.set_created()
+    print(db)
     user = await user_actions.create(db=db, db_obj=db_user)
     return {'id': user.id,
             'email': user.email}
