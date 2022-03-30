@@ -9,7 +9,7 @@ COPY . /code/accounts
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
-RUN poetry update
+RUN poetry install
 
 # Postgres
 #ARG API_PG_DB=""

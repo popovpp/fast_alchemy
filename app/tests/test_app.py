@@ -1,10 +1,30 @@
 import pytest
 from faker import Faker
 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.config import settings
+
 from app import __version__
-from accounts.accounts.db import get_db
+# from accounts.accounts.db import get_db
 from accounts.accounts.models import User
 from accounts.accounts.main import user_actions
+
+
+engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True, echo=True)
+SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+# Dependency
+def get_db():
+    try:
+        db = SessionLocal()
+        yield db
+    finally:
+        pass
 
 
 fake = Faker()
