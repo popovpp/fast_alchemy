@@ -52,7 +52,6 @@ class TestApp:
     @pytest.mark.asyncio
     async def test_get_all(self, get_user_list, db: Session = Depends(get_db)):
         for user in get_user_list:
-            print(db)
             user_actions.create(db=db, db_obj=user)
             print(user)
         print(await user_actions.get_all(User, 'created',db=get_db()))
