@@ -1,4 +1,6 @@
 import pytest
+import asyncio
+import random
 from faker import Faker
 from fastapi import Depends
 
@@ -10,22 +12,9 @@ from sqlalchemy.orm import sessionmaker, Session
 from app.app.config import settings
 
 from app.app import __version__
-#from accounts.db import get_db
+from accounts.db import get_db, engine, SessionLocal
 from accounts.models import User
 from accounts.main import user_actions
-
-
-engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True, echo=True)
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-
-# Dependency
-def get_db():
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        pass
 
 
 fake = Faker()
@@ -33,15 +22,26 @@ fake = Faker()
 
 @pytest.fixture
 def get_user():
-    return User(email=fake.ascii_email(), password='password')
+    user = User(email=fake.ascii_email(), password='password')
+    user.set_password('password')
+    user.set_is_verified_false()
+    user.set_is_superuser_false()
+    user.set_created()
+    return user
 
 
 @pytest.fixture
-def get_user_list():
-    print(fake.ascii_email())
-    print(engine)
-    print(settings.SQLALCHEMY_DATABASE_URI)
-    return [User(email=fake.ascii_email(), password='password') for _ in range(5)]
+def get_rand_attr():
+    attr_list = [
+        'id',
+        'email',
+        'password',
+        'is_active',
+        'is_verified',
+        'is_superuser',
+        'created'
+    ]
+    return random.choice(attr_list)
 
 
 class TestApp:
@@ -50,18 +50,25 @@ class TestApp:
         assert __version__ == '0.1.0'
     
     @pytest.mark.asyncio
-    async def test_get_all(self, get_user_list, db: Session = Depends(get_db)):
-        for user in get_user_list:
-            user_actions.create(db=db, db_obj=user)
-            print(user)
-        print(await user_actions.get_all(User, 'created',db=get_db()))
-        assert await user_actions.get_all(User, 'created',db=get_db())
+    async def test_get_all(self, db=SessionLocal()):
+        assert  len(await user_actions.get_all(User, 'created', db=db)) >= 0
 
-    def test_get_attr(self):
-        pass
+    @pytest.mark.asyncio
+    async def test_get_attr(self, get_user, get_rand_attr, db=SessionLocal()):
+        attr = get_rand_attr
+        user = get_user
+        await user_actions.create(db=db, db_obj=user)
+        user_readed = await user_actions.get_by_attr(User, getattr(user, attr), attr, db=db)
+        assert getattr(user, attr) == getattr(user_readed, attr)
+        await user_actions.remove(user_readed, db=db)
 
-    def test_create(self):
-        pass
+    @pytest.mark.asyncio
+    async def test_create(self, get_user, db=SessionLocal()):
+        user_created = get_user
+        await user_actions.create(db=db, db_obj=user_created)
+        user_readed = await user_actions.get_by_attr(User, user_created.email, 'email', db=db)
+        assert user_created.id == user_readed.id
+        await user_actions.remove(user_readed, db=db)
 
     def test_update(self):
         pass
