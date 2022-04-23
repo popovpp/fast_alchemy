@@ -4,7 +4,6 @@ from datetime import datetime
 from pydantic import BaseModel, UUID4
 
 
-# Shared properties
 class UserBase(BaseModel):
     email: str
     first_name: Optional[str]
@@ -16,10 +15,10 @@ class UserBase(BaseModel):
     last_login: Optional[str]
 
 
-# Properties to receive via API on creation
 class UserCreated(BaseModel):
     id: UUID4
     email: str
+
 
 class UserCreating(BaseModel):
     email: str
@@ -28,7 +27,6 @@ class UserCreating(BaseModel):
     password: str
 
 
-# Properties to receive via API on update
 class UserUpdate(BaseModel):
     email: Optional[str]
     first_name: Optional[str]
@@ -42,12 +40,10 @@ class UserInDBBase(UserBase):
         orm_mode = True
 
 
-# Additional properties to return via API
 class User(UserInDBBase):
     pass
 
 
-# Additional properties stored in DB
 class UserInDB(UserInDBBase):
     pass
 
