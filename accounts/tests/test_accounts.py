@@ -60,11 +60,15 @@ class TestApp:
         user_created = await user_actions.create(db=db, db_obj=user)
         assert user_created.id == user.id
 
-        user_readed = await user_actions.get_by_attr(User, getattr(user, attr), attr, db=db)
+        user_readed = await user_actions.get_by_attr_first(User, getattr(user, attr),
+                                                           attr, db=db)
         assert getattr(user, attr) == getattr(user_readed, attr)
+
+        assert  len(await user_actions.get_by_attr_all(User, getattr(user, attr),
+                                                       attr, db=db)) >= 0
         
         await user_actions.remove(user_readed, db=db)
-        user_readed = await user_actions.get_by_attr(User, user.id, 'id', db=db)
+        user_readed = await user_actions.get_by_attr_first(User, user.id, 'id', db=db)
         assert not user_readed
 
     def test_update(self):

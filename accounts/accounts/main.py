@@ -61,7 +61,7 @@ async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
     user_in_data = jsonable_encoder(user_in)
-    user = await user_actions.get_by_attr(User, user_in_data['email'], 'email', db=db)
+    user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
     if user:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
     db_user = User(**user_in_data)  # type: ignore
@@ -86,7 +86,7 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
                       user_in: schemas.UserUpdate,
                       credentials: HTTPAuthorizationCredentials = Security(security),
                       request: Request) -> Any:
-    user = await user_actions.get_by_attr(User, id, 'id', db=db)
+    user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -105,7 +105,7 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await user_actions.get_by_attr(User, id, 'id', db=db)
+    user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -123,7 +123,7 @@ async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
                    credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await user_actions.get_by_attr(User, email, 'email', db=db)
+    user = await user_actions.get_by_attr_first(User, email, 'email', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -141,7 +141,7 @@ async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
 @auth_required('is_superuser')
 async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
                       credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
-    user = await user_actions.get_by_attr(User, id, 'id', db=db)
+    user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
                         status_code=HTTP_404_NOT_FOUND,
@@ -186,16 +186,16 @@ async def refresh_token(*, db: Session = Depends(get_db),
     return {'new_access_token': new_token}
 
 
-@app.post(
-    "/superuser", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
-)
-async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
+async def create_superuser(*, db: Session = Depends(get_db)) -> Any:
     
-    superuser = await user_actions.get_by_attr(User, True, 'is_superuser', db=db)
+    superuser = await user_actions.get_by_attr_first(User, True, 'is_superuser', db=db)
     
+    user_in = {}
+    user_in['email'] = input('Введите email:')
+
     if not superuser:
         user_in_data = jsonable_encoder(user_in)
-        user = await user_actions.get_by_attr(User, user_in_data['email'], 'email', db=db)
+        user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
         if user:
             raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exists")
         db_user = User(**user_in_data)  # type: ignore
@@ -204,6 +204,6 @@ async def create_superuser(*, db: Session = Depends(get_db), user_in: schemas.Us
         db_user.set_is_superuser_true()
         db_user.set_created()
         user = await user_actions.create(db=db, db_obj=db_user)
-        return {'id': user.id, 'email': user.email}
+        print({'id': user.id, 'email': user.email})
     else:
-        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Superuser already exists")
+        print("Superuser already exists")

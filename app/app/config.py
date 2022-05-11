@@ -3,6 +3,9 @@ from pydantic import BaseSettings, PostgresDsn, validator
 from dotenv import load_dotenv
 
 
+TOKEN_EXP_TIME = 30
+
+
 load_dotenv()
 
 

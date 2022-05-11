@@ -3,7 +3,7 @@ import jwt # used for encoding and decoding jwt tokens
 from fastapi import HTTPException # used to handle error handling
 from datetime import datetime, timedelta # used to handle expiry time for tokens
 
-from app.app.config import settings
+from app.app.config import settings, TOKEN_EXP_TIME
 
 
 class Auth():
@@ -17,7 +17,7 @@ class Auth():
 
     async def encode_token(self, username):
         payload = {
-            'exp' : datetime.utcnow() + timedelta(days=0, minutes=30),
+            'exp' : datetime.utcnow() + timedelta(days=0, minutes=TOKEN_EXP_TIME),
             'iat' : datetime.utcnow(),
             'scope': 'access_token',
             'sub' : username

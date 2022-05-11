@@ -25,7 +25,7 @@ permissions = {
 
 async def get_current_user(db: Session, token: str = Depends(security)):
     email = await auth_handler.decode_token(token)
-    user = await actions.BaseActions.get_by_attr(User, email, 'email', db=db)
+    user = await actions.BaseActions.get_by_attr_first(User, email, 'email', db=db)
     await db.close()
     if not user:
         raise HTTPException(
