@@ -197,7 +197,7 @@ async def create_superuser(*, db: Session = Depends(get_db)) -> Any:
         user_in_data = jsonable_encoder(user_in)
         user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
         if user:
-            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exists")
+            print("User with same email already exists")
         db_user = User(**user_in_data)  # type: ignore
         db_user.set_password(user_in_data['password'])
         db_user.set_is_verified_false()
