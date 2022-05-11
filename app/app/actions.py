@@ -18,13 +18,16 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def get_all(self, model, obj_ordered_attr: str, db: Session, *, skip: int = 0,
                       limit: int = 100) -> List[ModelType]:
         result = await db.execute(select(model).order_by(getattr(model, obj_ordered_attr, None)).offset(skip).limit(limit))
-        return result.scalars().all()
+        result = result.scalars().all()
+        await db.close()
+        return result
 
     @classmethod
     async def get_by_attr(self, model, attr_value, attr_name: str, db: Session) -> Optional[ModelType]:
-        print(db)
         result = await db.execute(select(model).filter(getattr(model, attr_name, None)==attr_value))
-        return result.scalars().first()
+        result = result.scalars().first()
+        await db.close()
+        return result
 
     async def create(self, db: Session, *, db_obj: CreateSchemaType) -> ModelType:
         db.add(db_obj)

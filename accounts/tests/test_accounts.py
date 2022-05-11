@@ -33,12 +33,7 @@ def get_user():
 @pytest.fixture
 def get_rand_attr():
     attr_list = [
-        'id',
         'email',
-        'password',
-        'is_active',
-        'is_verified',
-        'is_superuser',
         'created'
     ]
     return random.choice(attr_list)
@@ -49,29 +44,28 @@ class TestApp:
     def test_version(self):
         assert __version__ == '0.1.0'
     
-    @pytest.mark.asyncio
-    async def test_get_all(self, db=SessionLocal()):
-        assert  len(await user_actions.get_all(User, 'created', db=db)) >= 0
+#    @pytest.mark.asyncio
+#    async def test_get_all(self, db=SessionLocal()):
+#        users = await user_actions.get_all(User, 'created', db=db)
+#        assert  len(users) >= 0
 
     @pytest.mark.asyncio
     async def test_get_attr(self, get_user, get_rand_attr, db=SessionLocal()):
         attr = get_rand_attr
         user = get_user
-        await user_actions.create(db=db, db_obj=user)
+
+        users = await user_actions.get_all(User, 'created', db=db)
+        assert  len(users) >= 0
+
+        user_created = await user_actions.create(db=db, db_obj=user)
+        assert user_created.id == user.id
+
         user_readed = await user_actions.get_by_attr(User, getattr(user, attr), attr, db=db)
         assert getattr(user, attr) == getattr(user_readed, attr)
+        
         await user_actions.remove(user_readed, db=db)
-
-    @pytest.mark.asyncio
-    async def test_create(self, get_user, db=SessionLocal()):
-        user_created = get_user
-        await user_actions.create(db=db, db_obj=user_created)
-        user_readed = await user_actions.get_by_attr(User, user_created.email, 'email', db=db)
-        assert user_created.id == user_readed.id
-        await user_actions.remove(user_readed, db=db)
+        user_readed = await user_actions.get_by_attr(User, user.id, 'id', db=db)
+        assert not user_readed
 
     def test_update(self):
-        pass
-
-    def test_remove(self):
         pass

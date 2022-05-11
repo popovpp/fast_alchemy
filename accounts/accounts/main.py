@@ -1,5 +1,3 @@
-import passlib
-
 from typing import Any, List
 
 from fastapi import Depends, FastAPI, HTTPException, Security
