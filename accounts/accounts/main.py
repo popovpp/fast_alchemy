@@ -69,7 +69,6 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
     db_user.set_created()
-    print(db)
     user = await user_actions.create(db=db, db_obj=db_user)
     return {'id': user.id,
             'email': user.email}
@@ -184,26 +183,3 @@ async def refresh_token(*, db: Session = Depends(get_db),
     new_token = await auth_handler.refresh_token(refresh_token)
     await get_current_user(db=db, token=new_token)
     return {'new_access_token': new_token}
-
-
-async def create_superuser(*, db: Session = Depends(get_db)) -> Any:
-    
-    superuser = await user_actions.get_by_attr_first(User, True, 'is_superuser', db=db)
-    
-    user_in = {}
-    user_in['email'] = input('Введите email:')
-
-    if not superuser:
-        user_in_data = jsonable_encoder(user_in)
-        user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
-        if user:
-            print("User with same email already exists")
-        db_user = User(**user_in_data)  # type: ignore
-        db_user.set_password(user_in_data['password'])
-        db_user.set_is_verified_false()
-        db_user.set_is_superuser_true()
-        db_user.set_created()
-        user = await user_actions.create(db=db, db_obj=db_user)
-        print({'id': user.id, 'email': user.email})
-    else:
-        print("Superuser already exists")

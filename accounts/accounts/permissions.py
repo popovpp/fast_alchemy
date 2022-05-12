@@ -1,4 +1,4 @@
-from starlette.status import (HTTP_400_BAD_REQUEST,
+from starlette.status import (HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND,
                               HTTP_401_UNAUTHORIZED,)
 from fastapi.security import HTTPBearer
 from fastapi import Depends, FastAPI, HTTPException
@@ -30,7 +30,7 @@ async def get_current_user(db: Session, token: str = Depends(security)):
     if not user:
         raise HTTPException(
             status_code=HTTP_404_NOT_FOUND,
-            detail="User not found",
+            detail="The current user not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not user.is_active:
