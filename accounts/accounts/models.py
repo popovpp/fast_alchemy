@@ -28,12 +28,6 @@ class User(Base):
     def set_password(self, password):
         self.password = self.hasher.hash(password)
 
-    def verify_password(self, password):
-        try:
-            return self.hasher.verify(password, self.password)
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=str(e))
-
     def set_is_active_false(self):
         self.is_active = False
 

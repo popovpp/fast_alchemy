@@ -1,26 +1,57 @@
-import os
-import jwt # used for encoding and decoding jwt tokens
-from fastapi import HTTPException # used to handle error handling
-from datetime import datetime, timedelta # used to handle expiry time for tokens
+"""
+NAME
+====
+auth - модуль, сождержащий методы необходимые для авторизации
 
-from app.app.config import settings, TOKEN_EXP_TIME
+VERSION
+=======
+0.1.0
+
+SYNOPSIS
+========
+
+    from accounts.auth import Auth
+
+    auth_handler = Auth()
+
+DESCRIPTION
+===========
+Модуль, содержащий класс Auth, имеющий в своем составе методы для верификации
+пароля пользователя, кодирования и декодирования access и refresh токенов.
+
+MODEL
+======
+"""
+
+import os
+import jwt
+from fastapi import HTTPException
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+
+from app.app.config import TOKEN_EXP_TIME
+from .models import User
 
 
 class Auth():
+    """Класс, реализующий методы верификации пароля, кодирования и декодирования jwt-токена"""
     secret = os.getenv("AUTH_SECRET_STRING")
-
-    async def encode_password(self, password):
-        return await self.hasher.hash(password)
+    hasher= CryptContext(schemes=['bcrypt'])
 
     async def verify_password(self, password, encoded_password):
-        return await self.hasher.verify(password, encoded_password)
+        """Верификация пароля"""
+        return self.hasher.verify(password, encoded_password)
 
-    async def encode_token(self, username):
+    async def encode_token(self, user):
+        """Кодирование access токена"""
         payload = {
             'exp' : datetime.utcnow() + timedelta(days=0, minutes=TOKEN_EXP_TIME),
             'iat' : datetime.utcnow(),
             'scope': 'access_token',
-            'sub' : username
+            'sub' : {
+                        "username": user.email,
+                        "user_id": str(user.id)
+                    }
         }
         return jwt.encode(
             payload, 
@@ -29,6 +60,7 @@ class Auth():
         )
 
     async def decode_token(self, token):
+        """Декодирование access токена"""
         try:
             payload = jwt.decode(token, self.secret, algorithms=['HS256'])
             if (payload['scope'] == 'access_token'):
@@ -39,12 +71,16 @@ class Auth():
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail='Invalid token')
 
-    async def encode_refresh_token(self, username):
+    async def encode_refresh_token(self, user):
+        """Кодирование refresh токена"""
         payload = {
             'exp' : datetime.utcnow() + timedelta(days=0, hours=10),
             'iat' : datetime.utcnow(),
             'scope': 'refresh_token',
-            'sub' : username
+            'sub' : {
+                        "username": user.email,
+                        "user_id": str(user.id)
+                    }
         }
         return jwt.encode(
             payload, 
@@ -53,11 +89,13 @@ class Auth():
         )
 
     async def refresh_token(self, refresh_token):
+        """Декодировнаие refresh токена"""
         try:
             payload = jwt.decode(refresh_token, self.secret, algorithms=['HS256'])
             if (payload['scope'] == 'refresh_token'):
-                username = payload['sub']
-                new_token = await self.encode_token(username)
+                sub = payload['sub']
+                user = User(id=sub['user_id'], email=sub['username'])
+                new_token = await self.encode_token(user)
                 return new_token
             raise HTTPException(status_code=401, detail='Invalid scope for token')
         except jwt.ExpiredSignatureError:

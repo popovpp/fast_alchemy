@@ -24,20 +24,20 @@ permissions = {
 
 
 async def get_current_user(db: Session, token: str = Depends(security)):
-    email = await auth_handler.decode_token(token)
-    user = await actions.BaseActions.get_by_attr_first(User, email, 'email', db=db)
+    request_user = await auth_handler.decode_token(token)
+    current_user = await actions.BaseActions.get_by_attr_first(User, request_user['user_id'], 'id', db=db)
     await db.close()
-    if not user:
+    if not current_user:
         raise HTTPException(
             status_code=HTTP_404_NOT_FOUND,
             detail="The current user not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not user.is_active:
+    elif not current_user.is_active:
         raise HTTPException(
             status_code=HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
-    return user
+    return current_user
 
 
 def auth_required(permissions_item):

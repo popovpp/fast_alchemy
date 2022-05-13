@@ -1,19 +1,17 @@
 from typing import Any, List
 
 from fastapi import Depends, FastAPI, HTTPException, Security
-from pydantic import UUID4, BaseModel
+from pydantic import UUID4
 from sqlalchemy.orm import Session
-from sqlalchemy import select
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.status import (HTTP_201_CREATED, HTTP_404_NOT_FOUND,
-                              HTTP_204_NO_CONTENT, HTTP_400_BAD_REQUEST,
-                              HTTP_401_UNAUTHORIZED,)
+                              HTTP_400_BAD_REQUEST,)
 from typing import TypeVar
 
-from . import models, schemas
-from .db import SessionLocal, engine, get_db
+from . import schemas
+from .db import get_db
 from .models import User
 from .auth import Auth
 from . permissions import get_current_user, auth_required
@@ -24,7 +22,7 @@ from app.app import actions
 # Define custom types for SQLAlchemy model, and Pydantic schemas
 ModelType = TypeVar("ModelType", bound=schemas.User)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=schemas.UserUpdate)
 
 
 class UserActions(actions.BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
@@ -121,7 +119,7 @@ async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
 )
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
-                   credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+                            credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
     user = await user_actions.get_by_attr_first(User, email, 'email', db=db)
     if not user:
         raise HTTPException(
@@ -158,14 +156,13 @@ async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
 )
 async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
     user_in_data = jsonable_encoder(user_in)
-    user = await db.execute(select(User).filter(User.email==user_in_data['email']))
-    user = user.scalars().first()
+    user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
     if not user:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="User not found")
-    if (not user.verify_password(user_in_data['password'])):
+    if not await auth_handler.verify_password(user_in_data['password'], user.password):
         raise HTTPException(status_code=401, detail='Invalid password')
-    access_token = await auth_handler.encode_token(user.email)
-    refresh_token = await auth_handler.encode_refresh_token(user.email)
+    access_token = await auth_handler.encode_token(user)
+    refresh_token = await auth_handler.encode_refresh_token(user)
     user.set_last_login()
     await user_actions.update(db=db, db_obj=user, obj_in={'last_login': user.last_login})
     return {'access_token': access_token, 'refresh_token': refresh_token}
