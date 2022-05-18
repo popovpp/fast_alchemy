@@ -19,18 +19,12 @@ from . permissions import get_current_user, auth_required
 from app.app import actions
 
 
-# Define custom types for SQLAlchemy model, and Pydantic schemas
-#ModelType = TypeVar("ModelType", bound=schemas.User)
-#CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
-#UpdateSchemaType = TypeVar("UpdateSchemaType", bound=schemas.UserUpdate)
-
-
 class UserActions(actions.BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
-    """User actions with basic CRUD operations"""
+    """Класс UserActions с базовыми CRUD операциями"""
 
     pass
 
-
+# Экземпляр класса UserAction для использования в методах
 user_actions = UserActions()
 
 
@@ -41,15 +35,12 @@ security = HTTPBearer()
 auth_handler = Auth()
 
 
-@app.get("/")
-def index(request: Request):
-    return {"message": "You are wellcome!"}
-
-
 @app.get("/users", response_model=List[schemas.User], tags=["users"])
 @auth_required('is_superuser')
 async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
                      credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    """Метод GET /users - получить список пользователей"""
+
     users = await user_actions.get_all(User, 'created',db=db, skip=skip, limit=limit)
     return users
 
@@ -58,6 +49,8 @@ async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int
     "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
+    """Метод POST /users - создать пользователя"""
+
     user_in_data = jsonable_encoder(user_in)
     user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
     if user:
@@ -83,12 +76,14 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
                       user_in: schemas.UserUpdate,
                       credentials: HTTPAuthorizationCredentials = Security(security),
                       request: Request) -> Any:
+    """Метод PUT /users/{id} - изменить поля записи пользователя с идентификатором id"""
+
     user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
-                        status_code=HTTP_404_NOT_FOUND,
-                        detail="User not found",
-                    )
+            status_code=HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
     user = await user_actions.update(db=db, db_obj=user, obj_in=user_in)
     return user
 
@@ -101,13 +96,15 @@ async def update_user(*, db: Session = Depends(get_db), id: UUID4,
 )
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
-                   credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+                         credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    """Метод GET /users/{id} - получить запись пользователя с идентификатором id"""
+
     user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
-                        status_code=HTTP_404_NOT_FOUND,
-                        detail="User not found",
-                    )
+            status_code=HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
     return user
 
 
@@ -120,12 +117,17 @@ async def get_user_by_id(*, db: Session = Depends(get_db), id: UUID4,
 @auth_required('is_superuser_or_is_owner')
 async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
                             credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    """
+    Метод GET /users/email/{email} - получить запись пользователя, имеющего электронный 
+    почтовый ящик email
+    """
+
     user = await user_actions.get_by_attr_first(User, email, 'email', db=db)
     if not user:
         raise HTTPException(
-                        status_code=HTTP_404_NOT_FOUND,
-                        detail="User not found",
-                    )
+            status_code=HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
     return user
 
 
@@ -138,12 +140,14 @@ async def get_user_by_email(*, db: Session = Depends(get_db), email: str,
 @auth_required('is_superuser')
 async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
                       credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+    """Метод DELETE /users/{id} - удалить запись пользователя, имеющего идентификатор id"""
+
     user = await user_actions.get_by_attr_first(User, id, 'id', db=db)
     if not user:
         raise HTTPException(
-                        status_code=HTTP_404_NOT_FOUND,
-                        detail="User not found",
-                    )
+            status_code=HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
     user = await user_actions.remove(user, db=db)
     return {'detail': 'No content'}
 
@@ -155,6 +159,8 @@ async def delete_user(*, db: Session = Depends(get_db), id: UUID4,
     tags=["auth"],
 )
 async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
+    """Метод POST /login - аутентификацич пользователя по логину и паролю"""
+
     user_in_data = jsonable_encoder(user_in)
     user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
     if not user:
@@ -176,6 +182,8 @@ async def login(*, db: Session = Depends(get_db), user_in: schemas.UserLogin):
 )
 async def refresh_token(*, db: Session = Depends(get_db),
                         credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Метод GET /refresh_token - обновить токен доступа"""
+
     refresh_token = credentials.credentials
     new_token = await auth_handler.refresh_token(refresh_token)
     await get_current_user(db=db, token=new_token)

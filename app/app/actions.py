@@ -2,7 +2,7 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import UUID4, BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
 from sqlalchemy import desc
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -151,3 +151,16 @@ class BaseActions(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raise e
         finally:
             await db.close()
+
+
+    async def get_by_query_all(self, model,
+                              query: Query,
+                              db: Session, *,
+                              skip: int = 0,
+                              limit: int = 100) -> Optional[ModelType]:
+        """
+        TODO
+        Получить все экземпляры объекта `model` из БД `db` по запросу `query`
+        """
+
+        pass

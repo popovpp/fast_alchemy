@@ -1,5 +1,3 @@
-import hashlib
-
 from datetime import datetime
 from uuid import uuid4
 from sqlalchemy import Column, String, Text, DateTime, Boolean
@@ -11,6 +9,8 @@ from .db import Base
 
 
 class User(Base):
+    """Модель User"""
+    
     __tablename__ = "users"
     hasher= CryptContext(schemes=['bcrypt'])
 

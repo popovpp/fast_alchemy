@@ -53,7 +53,6 @@ class Auth():
                         "user_id": str(user.id)
                     }
         }
-        print(self.secret)
         return jwt.encode(
             payload, 
             self.secret,

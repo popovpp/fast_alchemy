@@ -14,7 +14,7 @@ from app.app import actions
 security = HTTPBearer()
 auth_handler = Auth()
 
-
+# Словарь прав доступа
 permissions = {
     'is_superuser': 'is_superuser',
     'is_authenticated': 'is_authenticated',
@@ -24,9 +24,11 @@ permissions = {
 
 
 async def get_current_user(db: Session, token: str = Depends(security)):
+    """Выявление наличия в базе пользователя, который отправил запрос"""
+
     request_user = await auth_handler.decode_token(token)
-    current_user = await actions.BaseActions.get_by_attr_first(User, request_user['user_id'], 'id', db=db)
-    await db.close()
+    current_user = await actions.BaseActions.get_by_attr_first(User, request_user['user_id'],
+                                                               'id', db=db)
     if not current_user:
         raise HTTPException(
             status_code=HTTP_404_NOT_FOUND,
@@ -41,6 +43,8 @@ async def get_current_user(db: Session, token: str = Depends(security)):
 
 
 def auth_required(permissions_item):
+    """Декоратор, устанавливающий заданные права доступа из словаря прав доступа"""
+
     def auth_required_wrapper(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):

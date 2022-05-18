@@ -21,6 +21,8 @@ services:
   web1:
     build:
       context: ./accounts
+    env_file:
+     - .env
     restart: always
     command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; poetry run uvicorn accounts.main:app --reload --host 0.0.0.0 --port 8001'
     volumes:
