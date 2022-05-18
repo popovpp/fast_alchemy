@@ -20,9 +20,9 @@ from app.app import actions
 
 
 # Define custom types for SQLAlchemy model, and Pydantic schemas
-ModelType = TypeVar("ModelType", bound=schemas.User)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=schemas.UserUpdate)
+#ModelType = TypeVar("ModelType", bound=schemas.User)
+#CreateSchemaType = TypeVar("CreateSchemaType", bound=schemas.UserCreating)
+#UpdateSchemaType = TypeVar("UpdateSchemaType", bound=schemas.UserUpdate)
 
 
 class UserActions(actions.BaseActions[schemas.User, schemas.UserCreated, schemas.UserUpdate]):
