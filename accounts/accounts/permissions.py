@@ -1,3 +1,33 @@
+"""
+NAME
+====
+permissions - модуль, содержащий модель User
+
+VERSION
+=======
+0.1.0
+
+SYNOPSIS
+========
+
+    from accounts.permissions import auth_required
+
+
+    @app.get("/users", response_model=List[schemas.User], tags=["users"])
+    @auth_required('is_superuser')
+    async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int = 100,
+                         credentials: HTTPAuthorizationCredentials = Security(security)) -> Any:
+
+DESCRIPTION
+===========
+Модуль реализует декоратор @auth_required(permissions_item), который осуществляет проверку 
+значений элементов входящего запроса на соответствие заданному аргументу permissions_item.
+TO DO: здесь же можно реализовать детектироание ролей, роли можно передавать в токенах.
+
+MODEL
+======
+"""
+
 from starlette.status import (HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND,
                               HTTP_401_UNAUTHORIZED,)
 from fastapi.security import HTTPBearer

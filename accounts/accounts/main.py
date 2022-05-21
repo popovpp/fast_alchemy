@@ -1,3 +1,32 @@
+"""
+NAME
+====
+main - главный модуль приложения accounts
+
+VERSION
+=======
+0.1.0
+
+SYNOPSIS
+========
+
+DESCRIPTION
+===========
+Модуль, содержит методы API:
+    GET /users - получить список пользователей
+    POST /users - создать пользователя
+    PUT /users/{id} - изменить поля записи пользователя с идентификатором id
+    GET /users/{id} - получить запись пользователя с идентификатором id
+    GET /users/email/{email} - получить запись пользователя, имеющего электронный 
+    почтовый ящик email
+    DELETE /users/{id} - удалить запись пользователя, имеющего идентификатор id
+    POST /login - аутентификацич пользователя по логину и паролю
+    GET /refresh_token - обновить токен доступа
+
+MODEL
+======
+"""
+
 from typing import Any, List
 
 from fastapi import Depends, FastAPI, HTTPException, Security
@@ -55,7 +84,7 @@ async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCre
     user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)
     if user:
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="User with same email already exist")
-    db_user = User(**user_in_data)  # type: ignore
+    db_user = User(**user_in_data)
     db_user.set_password(user_in_data['password'])
     db_user.set_is_verified_false()
     db_user.set_is_superuser_false()
