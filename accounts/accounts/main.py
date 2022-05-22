@@ -78,7 +78,10 @@ async def list_users(*, db: Session = Depends(get_db), skip: int = 0, limit: int
     "/users", response_model=schemas.UserCreated, status_code=HTTP_201_CREATED, tags=["users"]
 )
 async def create_user(*, db: Session = Depends(get_db), user_in: schemas.UserCreating) -> Any:
-    """Метод POST /users - создать пользователя"""
+    """
+    Метод POST /users - создать пользователя.
+    TO DO: Реализовать в auth.py валидацию пароля по сложности при создании.
+    """
 
     user_in_data = jsonable_encoder(user_in)
     user = await user_actions.get_by_attr_first(User, user_in_data['email'], 'email', db=db)

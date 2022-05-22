@@ -43,6 +43,7 @@ class UserBase(BaseModel):
     last_login: Optional[str]
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "email": "test@test.com",
@@ -63,6 +64,7 @@ class UserCreated(BaseModel):
     email: str
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "email": "test@test.com",
@@ -79,6 +81,7 @@ class UserCreating(BaseModel):
     password: str
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "email": "test@test.com",
@@ -96,6 +99,7 @@ class UserUpdate(BaseModel):
     last_name: Optional[str]
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "email": "test@test.com",
@@ -157,6 +161,7 @@ class UserLogin(BaseModel):
     password: str
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "email": "test@test.com",
@@ -171,6 +176,7 @@ class UserLogined(BaseModel):
     refresh_token: str
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTMxNjQ3NzQsImlhdCI6MTY1MzE2Mjk3NCwic2NvcGUiOiJhY2Nlc3NfdG9rZW4iLCJzdWIiOnsidXNlcm5hbWUiOiJhZG1pbkBhZG1pbi5jb20iLCJ1c2VyX2lkIjoiNzY4ODQyNDctOTJmZC00MGI1LWFiZjgtZjViZGExOGVkYjQ3In19.D1GmAwLhV5RPLeT_FcY3SVLgM7KWHlQUHuK2N1myAJs",
@@ -184,9 +190,9 @@ class AccessTokenRefreshed(BaseModel):
     new_access_token: str
 
     class Config:
+        orm_mode = True
         schema_extra = {
             "example": {
                 "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NTMxNjQ3NzQsImlhdCI6MTY1MzE2Mjk3NCwic2NvcGUiOiJhY2Nlc3NfdG9rZW4iLCJzdWIiOnsidXNlcm5hbWUiOiJhZG1pbkBhZG1pbi5jb20iLCJ1c2VyX2lkIjoiNzY4ODQyNDctOTJmZC00MGI1LWFiZjgtZjViZGExOGVkYjQ3In19.D1GmAwLhV5RPLeT_FcY3SVLgM7KWHlQUHuK2N1myAJs",
             }
         }
-
