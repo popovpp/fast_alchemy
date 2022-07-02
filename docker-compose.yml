@@ -9,18 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - fastalchdata:/var/lib/postgresql/data/
-#  web:
-#    build:
-#      context: ./app
-#    restart: always
-#    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; poetry run uvicorn app.main:app --reload --host 0.0.0.0'
-#    volumes:
-#      - .:/code/
-#    ports:
-#      - "8000:8000"
-#    depends_on:
-#      - db
-  web1:
+  accounts:
     build:
       context: ./accounts
     env_file:
@@ -33,6 +22,5 @@ services:
       - "8001:8001"
     depends_on:
       - db
-#      - web
 volumes:
   fastalchdata:
